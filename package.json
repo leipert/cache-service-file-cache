@@ -1,0 +1,30 @@
+{
+  "name": "cache-service-file-cache",
+  "version": "1.0.0",
+  "description": "A file cache service for cache-service",
+  "main": "index.js",
+  "repository": "https://github.com/leipert/cache-service-file-cache",
+  "author": "Lukas Eipert <git@leipert.io>",
+  "license": "MIT",
+  "scripts": {
+    "test": "node_modules/.bin/mocha *.test.js",
+    "precommit": "lint-staged",
+    "prettier": "./node_modules/.bin/prettier --single-quote --trailing-comma es5 --tab-width 4 --write '*.js'"
+  },
+  "devDependencies": {
+    "expect": "^1.20.2",
+    "lint-staged": "^4.0.3",
+    "mocha": "^3.5.0",
+    "prettier": "^1.5.3"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "fs-extra": "^4.0.1"
+  },
+  "lint-staged": {
+    "*.js": [
+      "./node_modules/.bin/prettier --single-quote --trailing-comma es5 --tab-width 4 --write",
+      "git add"
+    ]
+  }
+}
