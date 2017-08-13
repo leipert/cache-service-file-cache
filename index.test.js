@@ -1,25 +1,36 @@
-var expect = require('expect');
-var FileCache = require('./index');
-var path = require('path');
-var fs = require('fs-extra');
+const { describe, it } = require('mocha');
+
+const expect = require('expect');
+const FileCache = require('./index');
+const path = require('path');
+const fs = require('fs-extra');
 const tempDir = path.join(__dirname, 'temp');
-var nodeCache = new FileCache({
+const nodeCache = new FileCache({
     tmpDir: tempDir,
     verbose: true,
 });
 
-var key = 'xxx';
-var value = 'yyy';
+const key = 'xxx';
+const value = 'yyy';
 
 afterEach(() => {
     nodeCache.flush();
 });
 
-var fileCount = () => {
+const fileCount = () => {
     if (fs.pathExistsSync(tempDir)) {
         return fs.readdirSync(tempDir).length;
     }
     return 0;
+};
+
+const corruptCache = () => {
+    if (fs.pathExistsSync(tempDir)) {
+        const files = fs.readdirSync(tempDir);
+        files.forEach(file => {
+            fs.writeFileSync(path.join(tempDir, file), 'corrupt');
+        });
+    }
 };
 
 describe('nodeCacheModule Tests', () => {
@@ -89,7 +100,7 @@ describe('nodeCacheModule Tests', () => {
         done();
     });
 
-    it('Should wait correctly if a cache is not filled', done => {
+    it('Should wait if a cache is not filled', done => {
         nodeCache.get(key, (err, returned) => {
             expect(returned).toBe(null);
             setTimeout(() => {
@@ -104,7 +115,7 @@ describe('nodeCacheModule Tests', () => {
         }, 150);
     });
 
-    it('Should wait correctly if a cache is not filled', done => {
+    it('Should wait if a cache is not filled, but get null later on', done => {
         nodeCache.get(key, (err, returned) => {
             expect(returned).toBe(null);
         });
@@ -114,5 +125,40 @@ describe('nodeCacheModule Tests', () => {
                 done();
             });
         }, 150);
+    });
+
+    it('Saving data with newlines should be saved correctly', done => {
+        const newLines = 'foo\nbar';
+
+        nodeCache.set(key, newLines);
+        nodeCache.get(key, (err, result) => {
+            expect(result).toBe(newLines);
+            done();
+        });
+    });
+
+    it('Saving data with circular data should be saved correctly', done => {
+        const object = {};
+        object.number = 1;
+        object.arr = [object, object];
+        object.arr.push(object.arr);
+        object.obj = object;
+
+        nodeCache.set(key, object);
+        nodeCache.get(key, (err, result) => {
+            expect(result.obj.number).toBe(result.obj.number);
+            done();
+        });
+    });
+
+    it('Loading corrupted keys should work just fine', done => {
+        nodeCache.set(key, value);
+
+        corruptCache();
+
+        nodeCache.get(key, (err, result) => {
+            expect(result).toBe(null);
+            done();
+        });
     });
 });

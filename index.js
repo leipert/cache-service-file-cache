@@ -1,11 +1,11 @@
 const crypto = require('crypto');
 const path = require('path');
+const CircularJSON = require('circular-json');
 
 const fs = require('fs-extra');
 const Promise = require('bluebird');
 
-function fileCache(config) {
-
+function FileCache(config) {
     const self = this;
     config = config || {};
     self.type = 'file-cache';
@@ -15,12 +15,12 @@ function fileCache(config) {
     self.retryDelay = config.retryDelay || 250;
 
     if (config.tmpDir) {
-        self.tmpDir = config.tmpDir
+        self.tmpDir = config.tmpDir;
     } else {
         if (!config.key) {
             throw new Error(`Please either supply 'tmpDir' or 'key' option`);
         }
-        self.tmpDir = path.join(require('os').tmpDir(), config.key)
+        self.tmpDir = path.join(require('os').tmpDir(), config.key);
     }
 
     function _log(message) {
@@ -32,7 +32,7 @@ function fileCache(config) {
     function _getCacheFilePath(key) {
         return path.join(
             self.tmpDir,
-            crypto.createHash('md5').update(key).digest('hex') + '.json'
+            crypto.createHash('md5').update(key).digest('hex') + '.cjson'
         );
     }
 
@@ -41,17 +41,29 @@ function fileCache(config) {
     function _getFile(key) {
         const file = _getCacheFilePath(key);
 
-
-        return fs.pathExists(file)
-            .then((exists) => {
+        return fs
+            .pathExists(file)
+            .then(exists => {
                 if (exists) {
                     _log(`_getFile: Trying to load key ${key}: ${file}`);
-                    return fs.readJSONSync(file);
+                    return fs.readFile(file);
                 }
                 _log(`_getFile: No cache for key ${key} found`);
                 return null;
             })
-            .then((json) => {
+            .then(string => {
+                if (string) {
+                    try {
+                        return CircularJSON.parse(string);
+                    } catch (e) {
+                        _log(`_getFile: Cache for ${key} could not be parsed`);
+                        _log(e);
+                        return null;
+                    }
+                }
+                return null;
+            })
+            .then(json => {
                 if (json && json.value) {
                     delete askedForFile[file];
                     if (json.expires && json.expires > Date.now()) {
@@ -62,51 +74,43 @@ function fileCache(config) {
 
                 if (askedForFile[file] <= self.maxRetries) {
                     askedForFile[file] += 1;
-                    return Promise.delay(self.retryDelay)
-                        .then(() => {
-                            _log(`Waiting ${self.retryDelay}ms for key ${key}`);
-                            return _getFile(key);
-                        })
+                    return Promise.delay(self.retryDelay).then(() => {
+                        _log(`Waiting ${self.retryDelay}ms for key ${key}`);
+                        return _getFile(key);
+                    });
                 } else {
                     askedForFile[file] = 1;
                 }
                 return null;
-            })
-
+            });
     }
 
     function mget(keys, callback) {
-
         const keyArray = Array.isArray(keys) ? keys : [keys];
         const promises = keyArray.reduce((result, key) => {
             result[key] = _getFile(key)
-                .then((value) => value === null ? undefined : value)
+                .then(value => (value === null ? undefined : value))
                 .catch(() => undefined);
             return result;
         }, {});
 
-        Promise.props(promises)
-            .then((result) => {
-                callback(null, result)
-            })
-
+        Promise.props(promises).then(result => {
+            callback(null, result);
+        });
     }
 
-    function get (key, callback) {
-
+    function get(key, callback) {
         _getFile(key)
-            .then((value) => {
+            .then(value => {
                 callback(null, value);
             })
-            .catch((error) => {
-                callback(error, null)
+            .catch(error => {
+                callback(error, null);
             });
-
     }
 
     function flush(cb) {
-
-        _log('flush: flushing everything')
+        _log('flush: flushing everything');
         askedForFile = {};
         if (cb) {
             fs.remove(self.tmpDir, cb);
@@ -116,7 +120,6 @@ function fileCache(config) {
     }
 
     function del(keys, cb) {
-
         if (!Array.isArray(keys)) {
             keys = [keys];
         }
@@ -124,55 +127,49 @@ function fileCache(config) {
         const errors = [];
 
         if (cb) {
-
             let count = 0;
 
-            Promise.all(keys.map(key => {
+            Promise.all(
+                keys.map(key => {
+                    const file = _getCacheFilePath(key);
 
-                const file = _getCacheFilePath(key);
-
-                return fs.pathExists(file)
-                    .then((exists) => {
-                        if (exists) {
-                            return fs.remove(file)
-                                .then(() => {
-                                    count = +1
+                    return fs
+                        .pathExists(file)
+                        .then(exists => {
+                            if (exists) {
+                                return fs.remove(file).then(() => {
+                                    count = +1;
                                 });
-                        }
-                        return null;
-                    })
-                    .catch((err) => {
-                        _log(`Could not delete key ${key}`);
-                        _log(e);
-                        errors.push(err);
-                    })
-            })).then(() => {
+                            }
+                            return null;
+                        })
+                        .catch(err => {
+                            _log(`Could not delete key ${key}`);
+                            _log(e);
+                            errors.push(err);
+                        });
+                })
+            ).then(() => {
                 if (errors.length > 0) {
                     const error = Error('Could not delete from cache');
                     error.errors = errors;
                     cb(error, count);
                 } else {
-                    cb(null, count)
+                    cb(null, count);
                 }
-            })
+            });
         } else {
-
-
             keys.forEach(key => {
-
                 const file = _getCacheFilePath(key);
                 try {
                     if (fs.pathExistsSync(file)) {
                         fs.removeSync(file);
-
                     }
                 } catch (e) {
                     _log(`Could not delete key ${key}`);
                     _log(e);
                 }
-
             });
-
         }
     }
 
@@ -181,55 +178,50 @@ function fileCache(config) {
         const file = _getCacheFilePath(key);
         fs.ensureDirSync(path.dirname(file));
 
-        const safe = {
+        const object = CircularJSON.stringify({
             key: key,
             retrieved: now,
             expires: now + expiration * 1000,
-            value: value
-        };
+            value: value,
+        });
 
-        _log(`_safeFile: Trying to safe ${key} in ${file} (expiration: ${expiration})`);
+        _log(
+            `_safeFile: Trying to safe ${key} in ${file} (expiration: ${expiration})`
+        );
 
         if (async) {
-            return fs.writeJSON(file, safe);
+            return fs.writeFile(file, object);
         }
-        fs.writeJSONSync(file, safe)
-
+        fs.writeFileSync(file, object);
     }
 
     function mset(obj) {
         const expiration = arguments[1] || self.defaultExpiration;
         const cb = arguments[2];
 
-
         if (cb) {
-
             const promises = [];
 
-            Object.keys(obj).forEach((key) => {
+            Object.keys(obj).forEach(key => {
                 promises.push(_safeFile(key, expiration, obj[key], true));
             });
 
             Promise.all(promises)
                 .then(() => cb(null, true))
-                .catch(err => cb(err))
-
+                .catch(err => cb(err));
         } else {
-
-            Object.keys(obj).forEach((key) => {
+            Object.keys(obj).forEach(key => {
                 _safeFile(key, expiration, obj[key], false);
-            })
-
+            });
         }
-
     }
 
-    function set () {
+    function set() {
         const key = arguments[0];
         const value = arguments[1];
         const expiration = arguments[2] || self.defaultExpiration;
-        const refresh = (arguments.length === 5) ? arguments[3] : null;
-        const cb = (arguments.length === 5) ? arguments[4] : arguments[3];
+        const refresh = arguments.length === 5 ? arguments[3] : null;
+        const cb = arguments.length === 5 ? arguments[4] : arguments[3];
 
         if (refresh) {
             throw new Error('Refresh is not supported by this store');
@@ -240,7 +232,7 @@ function fileCache(config) {
                 .then(() => cb(null, true))
                 .catch(error => cb(error));
         } else {
-            _safeFile(key, expiration, value, false)
+            _safeFile(key, expiration, value, false);
         }
     }
 
@@ -255,4 +247,4 @@ function fileCache(config) {
     };
 }
 
-module.exports = fileCache;
+module.exports = FileCache;
