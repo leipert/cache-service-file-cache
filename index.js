@@ -1,3 +1,5 @@
+'use strict';
+
 const crypto = require('crypto');
 const path = require('path');
 const CircularJSON = require('circular-json');
@@ -20,7 +22,7 @@ function FileCache(config) {
         if (!config.key) {
             throw new Error(`Please either supply 'tmpDir' or 'key' option`);
         }
-        self.tmpDir = path.join(require('os').tmpDir(), config.key);
+        self.tmpDir = path.join(require('os').tmpdir(), config.key);
     }
 
     function _log(message) {

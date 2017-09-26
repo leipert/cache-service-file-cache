@@ -1,4 +1,7 @@
-const { describe, it } = require('mocha');
+const mocha = require('mocha');
+
+const describe = mocha.describe;
+const it = mocha.it;
 
 const expect = require('expect');
 const FileCache = require('./index');
