@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Fixed
 - Deprecation warning because of the usage of `os.tmpDir` instead of `os.tmpdir`
+- Make it compatible with node LTS 4
 
 ## [1.0.1] 2017-08-13
 
