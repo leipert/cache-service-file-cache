@@ -34,7 +34,10 @@ function FileCache(config) {
     function _getCacheFilePath(key) {
         return path.join(
             self.tmpDir,
-            crypto.createHash('md5').update(key).digest('hex') + '.cjson'
+            crypto
+                .createHash('md5')
+                .update(key)
+                .digest('hex') + '.cjson'
         );
     }
 
