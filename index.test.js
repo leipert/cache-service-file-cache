@@ -3,7 +3,7 @@ const mocha = require('mocha');
 const describe = mocha.describe;
 const it = mocha.it;
 
-const expect = require('expect');
+const should = require('should');
 const FileCache = require('./index');
 const path = require('path');
 const fs = require('fs-extra');
@@ -39,80 +39,72 @@ const corruptCache = () => {
 describe('nodeCacheModule Tests', () => {
     it('Getting absent key should return null', done => {
         nodeCache.get(key, (err, result) => {
-            expect(result).toBe(null);
+            should(result).be.null();
             done();
         });
     });
     it('Setting then getting key should return value', done => {
         nodeCache.set(key, value);
         nodeCache.get(key, (err, result) => {
-            expect(result).toBe(value);
+            should(result).equal(value);
             done();
         });
     });
-    it('Setting then deleting then getting key should return null', function(
-        done
-    ) {
+    it('Setting then deleting then getting key should return null', function(done) {
         nodeCache.set(key, value);
         nodeCache.del(key);
         nodeCache.get(key, (err, result) => {
-            expect(result).toBe(null);
+            should(result).be.null();
             done();
         });
     });
 
-    it('Setting several keys then calling .mget() should retrieve all keys', function(
-        done
-    ) {
+    it('Setting several keys then calling .mget() should retrieve all keys', function(done) {
         nodeCache.set(key, value);
         nodeCache.set('key2', 'value2');
         nodeCache.set('key3', 'value3');
         nodeCache.mget([key, 'key2', 'key3', 'key4'], (err, response) => {
-            expect(response[key]).toBe(value);
-            expect(response.key2).toBe('value2');
-            expect(response.key3).toBe('value3');
-            expect(response.key4).toBe(undefined);
+            should(response[key]).equal(value);
+            should(response.key2).equal('value2');
+            should(response.key3).equal('value3');
+            should(response.key4).be.undefined();
             done();
         });
     });
-    it('Setting several keys via .mset() then calling .mget() should retrieve all keys', function(
-        done
-    ) {
+    it('Setting several keys via .mset() then calling .mget() should retrieve all keys', function(done) {
         nodeCache.mset({ [key]: value, key2: 'value2', key3: 'value3' });
         nodeCache.mget([key, 'key2', 'key3', 'key4'], (err, response) => {
-            expect(response[key]).toBe(value);
-            expect(response.key2).toBe('value2');
-            expect(response.key3).toBe('value3');
-            expect(response.key4).toBe(undefined);
+            should(response[key]).equal(value);
+            should(response.key2).equal('value2');
+            should(response.key3).equal('value3');
+            should(response.key4).be.undefined();
             done();
         });
     });
-    it('Setting several keys then calling .flush() should remove all keys', function(
-        done
-    ) {
-        var keyCount = fileCount();
-        expect(keyCount).toBe(0);
+    it('Setting several keys then calling .flush() should remove all keys', function(done) {
+        let keyCount = fileCount();
+        should(keyCount).equal(0);
         nodeCache.set(key, value);
         nodeCache.set('key2', 'value2');
         nodeCache.set('key3', 'value3');
         keyCount = fileCount();
-        expect(keyCount).toBe(3);
+        should(keyCount).equal(3);
         nodeCache.flush();
         keyCount = fileCount();
-        expect(keyCount).toBe(0);
+        should(keyCount).equal(0);
         done();
     });
 
     it('Should wait if a cache is not filled', done => {
         nodeCache.get(key, (err, returned) => {
-            expect(returned).toBe(null);
+            should(returned).be.null();
             setTimeout(() => {
                 nodeCache.set(key, value);
             }, 500);
         });
         setTimeout(() => {
             nodeCache.get(key, (err, returned) => {
-                expect(returned).toBe(value);
+                should(returned).equal(value);
                 done();
             });
         }, 150);
@@ -120,11 +112,11 @@ describe('nodeCacheModule Tests', () => {
 
     it('Should wait if a cache is not filled, but get null later on', done => {
         nodeCache.get(key, (err, returned) => {
-            expect(returned).toBe(null);
+            should(returned).be.null();
         });
         setTimeout(() => {
             nodeCache.get(key, (err, returned) => {
-                expect(returned).toBe(null);
+                should(returned).be.null();
                 done();
             });
         }, 150);
@@ -135,7 +127,7 @@ describe('nodeCacheModule Tests', () => {
 
         nodeCache.set(key, newLines);
         nodeCache.get(key, (err, result) => {
-            expect(result).toBe(newLines);
+            should(result).equal(newLines);
             done();
         });
     });
@@ -149,7 +141,7 @@ describe('nodeCacheModule Tests', () => {
 
         nodeCache.set(key, object);
         nodeCache.get(key, (err, result) => {
-            expect(result.obj.number).toBe(result.obj.number);
+            should(result.obj.number).equal(result.obj.number);
             done();
         });
     });
@@ -160,7 +152,7 @@ describe('nodeCacheModule Tests', () => {
         corruptCache();
 
         nodeCache.get(key, (err, result) => {
-            expect(result).toBe(null);
+            should(result).be.null();
             done();
         });
     });
