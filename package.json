@@ -1,6 +1,6 @@
 {
   "name": "cache-service-file-cache",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A file cache service for cache-service",
   "main": "index.js",
   "repository": "https://github.com/leipert/cache-service-file-cache",
