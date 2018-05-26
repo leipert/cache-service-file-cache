@@ -16,6 +16,7 @@
     "mocha": "^5.2.0",
     "prettier": "^1.12.1",
     "pretty-quick": "^1.6.0",
+    "semantic-release": "^15.5.0",
     "should": "^13.2.1"
   },
   "dependencies": {

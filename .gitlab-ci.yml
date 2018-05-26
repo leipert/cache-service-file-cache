@@ -1,0 +1,31 @@
+# The release pipeline will run only if all jobs in the test pipeline are successful
+stages:
+    - test
+    - release
+
+before_script:
+  - yarn install
+
+node:6:
+  image: node:6
+  stage: test
+  script:
+    - yarn test
+
+node:8:
+  image: node:8
+  stage: test
+  script:
+    - yarn test
+
+node:8:
+  image: node:10
+  stage: test
+  script:
+    - yarn test
+
+publish:
+  image: node:8
+  stage: release
+  script:
+    - yarn run semantic-release
